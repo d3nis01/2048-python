@@ -1,6 +1,7 @@
 import pygame
 import random
 from moves import move
+import sys
 
 GRID_SIZE = 4
 TILE_SIZE = 100
@@ -34,21 +35,33 @@ def init_game():
     return board
 
 def add_new_tile(board):
-    empty_tiles = [(r, c) for r in range(GRID_SIZE) for c in range(GRID_SIZE) if board[r][c] == 0]
+    empty_tiles = [(row, column) for row in range(GRID_SIZE) for column in range(GRID_SIZE) if board[row][column] == 0]
     if empty_tiles:
         r, c = random.choice(empty_tiles)
         board[r][c] = 2 if random.random() < 0.9 else 4
+        
+def is_game_over(board):
+    for row in range(GRID_SIZE):
+        for column in range(GRID_SIZE):
+            if board[row][column] == 0:
+                return False
+            if row < GRID_SIZE - 1 and board[row][column] == board[row + 1][column]:
+                return False
+            if column < GRID_SIZE - 1 and board[row][column] == board[row][column + 1]:
+                return False
+    return True
 
-def draw_board(screen, board):
+
+def draw_board(screen, board, game_over=False):
     screen.fill((187, 173, 160))
 
-    for r in range(GRID_SIZE):
-        for c in range(GRID_SIZE):
-            value = board[r][c]
+    for row in range(GRID_SIZE):
+        for column in range(GRID_SIZE):
+            value = board[row][column]
             color = COLORS.get(value, (60, 58, 50))
             rect = pygame.Rect(
-                c * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
-                r * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
+                column * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
+                row * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
                 TILE_SIZE, TILE_SIZE
             )
             pygame.draw.rect(screen, color, rect)
@@ -57,6 +70,13 @@ def draw_board(screen, board):
                 text = FONT.render(str(value), True, (119, 110, 101))
                 text_rect = text.get_rect(center=rect.center)
                 screen.blit(text, text_rect)
+        
+    if game_over:
+        game_over_text = GAME_OVER_FONT.render("Game Over!", True, (255, 0, 0))
+        text_rect = game_over_text.get_rect(
+            center=(SCREEN_SIZE // 2, WINDOW_HEIGHT // 2)
+        )
+        screen.blit(game_over_text, text_rect)
 
 
 def main():
@@ -67,15 +87,17 @@ def main():
     add_new_tile(board)
     add_new_tile(board)
     clock = pygame.time.Clock()
+    
+    game_over = False
+
 
     while True:
-        direction = None
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                return
-
-            if event.type == pygame.KEYDOWN:
+                sys.exit()
+            if not game_over and event.type == pygame.KEYDOWN:
+                direction = None
                 if event.key == pygame.K_UP:
                     direction = 'UP'
                 elif event.key == pygame.K_DOWN:
@@ -85,12 +107,14 @@ def main():
                 elif event.key == pygame.K_RIGHT:
                     direction = 'RIGHT'
 
-        if direction:
-            moved = move(board, direction)
-            if moved:
-                add_new_tile(board)
+                if direction:
+                    moved = move(board, direction)
+                    if moved:
+                        add_new_tile(board)
 
-        draw_board(screen, board)
+                game_over = is_game_over(board)
+
+        draw_board(screen, board, game_over)
         pygame.display.flip()
         clock.tick(60)
 
