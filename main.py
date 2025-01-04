@@ -1,13 +1,14 @@
 import pygame
 import random
-from moves import move
+from moves import *
 import sys
 
 GRID_SIZE = 4
 TILE_SIZE = 100
 TILE_MARGIN = 10
+INFO_HEIGHT = 100
 SCREEN_SIZE = GRID_SIZE * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN
-WINDOW_HEIGHT = SCREEN_SIZE
+WINDOW_HEIGHT = SCREEN_SIZE + INFO_HEIGHT
 
 COLORS = {
     0: (204, 192, 179),
@@ -51,30 +52,42 @@ def is_game_over(board):
                 return False
     return True
 
+def get_highest_tile(board):
+    return max(max(row) for row in board)
 
-def draw_board(screen, board, game_over=False):
+
+def draw_board(screen, board, score, moves, game_over=False):
     screen.fill((187, 173, 160))
 
-    for row in range(GRID_SIZE):
-        for column in range(GRID_SIZE):
-            value = board[row][column]
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            value = board[r][c]
             color = COLORS.get(value, (60, 58, 50))
             rect = pygame.Rect(
-                column * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
-                row * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
+                c * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN,
+                r * (TILE_SIZE + TILE_MARGIN) + TILE_MARGIN + INFO_HEIGHT,
                 TILE_SIZE, TILE_SIZE
             )
             pygame.draw.rect(screen, color, rect)
-            
             if value:
                 text = FONT.render(str(value), True, (119, 110, 101))
                 text_rect = text.get_rect(center=rect.center)
                 screen.blit(text, text_rect)
-        
+
+    highest_tile = get_highest_tile(board)
+
+    score_text = INFO_FONT.render(f"Score: {score}", True, (255, 255, 255))
+    moves_text = INFO_FONT.render(f"Moves: {moves}", True, (255, 255, 255))
+    highest_text = INFO_FONT.render(f"Highest Tile: {highest_tile}", True, (255, 255, 255))
+
+    screen.blit(score_text, (20, 20))  
+    screen.blit(moves_text, (SCREEN_SIZE - 200, 20)) 
+    screen.blit(highest_text, (20, 60))
+
     if game_over:
         game_over_text = GAME_OVER_FONT.render("Game Over!", True, (255, 0, 0))
         text_rect = game_over_text.get_rect(
-            center=(SCREEN_SIZE // 2, WINDOW_HEIGHT // 2)
+            center=(SCREEN_SIZE // 2, (WINDOW_HEIGHT + INFO_HEIGHT) // 2)
         )
         screen.blit(game_over_text, text_rect)
 
@@ -84,6 +97,8 @@ def main():
     screen = pygame.display.set_mode((SCREEN_SIZE, WINDOW_HEIGHT))
     pygame.display.set_caption("2048")
     board = init_game()
+    score = 0
+    moves = 0
     add_new_tile(board)
     add_new_tile(board)
     clock = pygame.time.Clock()
@@ -108,15 +123,17 @@ def main():
                     direction = 'RIGHT'
 
                 if direction:
-                    moved = move(board, direction)
+                    moved, gained_score = move(board, direction)
                     if moved:
                         add_new_tile(board)
+                        score += gained_score
+                        moves += 1
 
                 game_over = is_game_over(board)
-
-        draw_board(screen, board, game_over)
+                
+        draw_board(screen, board, score, moves, game_over)
         pygame.display.flip()
-        clock.tick(60)
+        clock.tick(30)
 
 if __name__ == "__main__":
     main()
